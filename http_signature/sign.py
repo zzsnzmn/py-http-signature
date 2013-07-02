@@ -36,7 +36,8 @@ class Signer(object):
                 self._keys = self._keys[1:]
                 self.sign_algorithm, self.hash_algorithm = ('rsa', 'sha1')
         if not self._agent_key and self.sign_algorithm == 'rsa':
-            if secret.startswith('-----BEGIN RSA PRIVATE KEY-----'):
+            if (secret.startswith('-----BEGIN RSA PRIVATE KEY-----') or
+                secret.startswith('-----BEGIN PRIVATE KEY-----')):
                 # string with PEM encoded key data
                 k = secret
             else:
