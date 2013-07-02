@@ -1,6 +1,14 @@
 Changes
 -------
 
+0.2.0 ()
+~~~~~~~~
+
+* Update to newer spec (incompatible with prior version).
+* Handle `request-line` meta-header.
+* Allow secret to be a PEM encoded string.
+* Add test cases from spec.
+
 0.1.4 (2012-10-03)
 ~~~~~~~~~~~~~~~~~~
 
