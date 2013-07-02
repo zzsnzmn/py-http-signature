@@ -1,17 +1,26 @@
 Python http-signature
 =====================
 
-Sign http requests with secure signatures.
+Sign HTTP requests with secure signatures. See the original project_, original spec_, and IETF draft_ for details.
+
+.. _project: https://github.com/joyent/node-http-signature
+.. _spec: https://github.com/joyent/node-http-signature/blob/master/http_signing.md
+.. _draft: https://datatracker.ietf.org/doc/draft-cavage-http-signatures/
 
 Requirements
 ------------
 
-* PyCrypto
+* PyCrypto_
 
 Optional:
 
-* ssh or paramiko >= 1.8.0 (for ssh-agent integration)
-* requests
+* ssh_ or paramiko_ >= 1.8.0 (for ssh-agent integration)
+* requests_
+
+.. _PyCrypto: https://pypi.python.org/pypi/pycrypto
+.. _ssh: https://pypi.python.org/pypi/ssh
+.. _paramiko: https://pypi.python.org/pypi/paramiko
+.. _requests: https://pypi.python.org/pypi/requests
 
 Usage
 -----
