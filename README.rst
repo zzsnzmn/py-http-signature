@@ -53,6 +53,13 @@ Class initialization parameters
 ``headers`` is the list of HTTP headers that are concatenated and used as signing objects. By default it is the specification's minimum, the ``Date`` HTTP header.  
 ``secret``, ``algorithm``, and ``allow_agent`` are as above.
 
+Tests
+-----
+
+To run tests::
+
+    python -m unittest discover
+
 License
 -------
 
