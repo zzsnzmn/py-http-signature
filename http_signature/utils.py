@@ -1,4 +1,6 @@
 import struct
+import hashlib
+import base64
 
 def lkv(d):
     parts = []
@@ -30,3 +32,14 @@ class CaseInsensitiveDict(dict):
 
     def __contains__(self, key):
         return super(CaseInsensitiveDict, self).__contains__(key.lower())
+
+def get_fingerprint(key):
+    """
+    Takes an ssh public key and generates the fingerprint.
+
+    See: http://tools.ietf.org/html/rfc4716 for more info
+    """
+    key = base64.b64decode(key.strip().split()[1].encode('ascii'))
+    fp_plain = hashlib.md5(key).hexdigest()
+    return ':'.join(a+b for a,b in zip(fp_plain[::2], fp_plain[1::2]))
+

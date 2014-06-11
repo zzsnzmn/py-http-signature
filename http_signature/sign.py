@@ -32,7 +32,7 @@ class Signer(object):
             keys = ssh.Agent().get_keys()
             self._keys = filter(is_rsa, keys)
             if self._keys:
-                self._agent_key = self._keys[0] 
+                self._agent_key = self._keys[0]
                 self._keys = self._keys[1:]
                 self.sign_algorithm, self.hash_algorithm = ('rsa', 'sha1')
         if not self._agent_key and self.sign_algorithm == 'rsa':
@@ -53,32 +53,32 @@ class Signer(object):
             self._hash = HASHES[self.hash_algorithm]
         elif self.sign_algorithm == 'hmac':
             self._hash = HMAC.new(secret, digestmod=HASHES[self.hash_algorithm])
-    
+
     @property
     def algorithm(self):
         return '%s-%s' % (self.sign_algorithm, self.hash_algorithm)
-    
+
     def sign_agent(self, sign_string):
         data = self._agent_key.sign_ssh_data(None, sign_string)
         return sig(data)
-    
+
     def sign_rsa(self, sign_string):
         h = self._hash.new()
         h.update(sign_string)
         return self._rsa.sign(h)
-    
+
     def sign_hmac(self, sign_string):
         hmac = self._hash.copy()
         hmac.update(sign_string)
         return hmac.digest()
-    
+
     def swap_keys(self):
         if self._keys:
             self._agent_key = self._keys[0]
             self._keys = self._keys[1:]
         else:
             self._agent_key = None
-    
+
     def sign(self, sign_string):
         data = None
         if self._agent_key:
@@ -96,7 +96,7 @@ class HeaderSigner(object):
     '''
     Generic object that will sign headers as a dictionary using the http-signature scheme.
     https://github.com/joyent/node-http-signature/blob/master/http_signing.md
-    
+
     key_id is the mandatory label indicating to the server which secret to use
     secret is the filename of a pem file in the case of rsa, a password string in the case of an hmac algorithm
     algorithm is one of the six specified algorithms
@@ -109,7 +109,7 @@ class HeaderSigner(object):
         self.headers = headers
         self.signature_template = self.build_signature_template(
                 key_id, algorithm, headers)
-    
+
     def build_signature_template(self, key_id, algorithm, headers):
         """
         Build the Signature template for use with the Authorization header.
@@ -120,7 +120,7 @@ class HeaderSigner(object):
 
         The signature must be interpolated into the template to get the final Authorization header value.
         """
-        param_map = {'keyId': key_id, 
+        param_map = {'keyId': key_id,
                      'algorithm': algorithm,
                      'signature': '%s'}
         if headers:
