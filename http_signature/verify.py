@@ -48,8 +48,7 @@ class HeaderVerifier(Verifier):
     Verifies an HTTP signature from given headers.
     """
     def __init__(self, headers, required_headers=None, method=None, path=None,
-                 host=None, http_version='1.1', key_id='~/.ssh/id_rsa.pub'):
-        super(HeaderVerifier, self).__init__(key_id=key_id, hash_algorithm="sha256")
+                 host=None, http_version='1.1'):
 
         required_headers = required_headers or ['date']
         self.auth_dict = self.parse_auth(headers['authorization'])
@@ -59,6 +58,8 @@ class HeaderVerifier(Verifier):
         self.method = method
         self.path = path
         self.host = host
+        super(HeaderVerifier, self).__init__(key_id=self.auth_dict['keyId'],
+                                             hash_algorithm="sha256") # should get hash algorithm from request...
 
     def parse_auth(self, auth):
         """Basic Authorization header parsing."""

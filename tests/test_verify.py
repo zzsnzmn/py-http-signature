@@ -48,14 +48,14 @@ class TestVerify(unittest.TestCase):
             'Date': 'Thu, 05 Jan 2012 21:31:40 GMT'
         }
         signed = hs.sign(unsigned)
-        hv = HeaderVerifier(headers=signed, key_id=self.public_key)
+        hv = HeaderVerifier(headers=signed)
         self.assertTrue(hv.verify_headers())
 
     def test_signed_headers(self):
         HOST = "example.com"
         METHOD = "POST"
         PATH = '/foo?param=value&pet=dog'
-        hs = HeaderSigner(key_id='Test', secret=self.private_key, headers=[
+        hs = HeaderSigner(key_id=self.public_key, secret=self.private_key, headers=[
             'request-line',
             'host',
             'date',
@@ -73,21 +73,22 @@ class TestVerify(unittest.TestCase):
         signed = hs.sign(unsigned, method=METHOD,
                 path=PATH)
 
-        hv = HeaderVerifier(headers=signed, key_id=self.public_key, host=HOST, method=METHOD, path=PATH)
+        hv = HeaderVerifier(headers=signed, host=HOST, method=METHOD, path=PATH)
         self.assertTrue(hv.verify_headers())
 
     def test_incorrect_headers(self):
         HOST = "example.com"
         METHOD = "POST"
         PATH = '/foo?param=value&pet=dog'
-        hs = HeaderSigner(key_id='Test', secret=self.private_key, headers=[
-            'request-line',
-            'host',
-            'date',
-            'content-type',
-            'content-md5',
-            'content-length'
-        ])
+        hs = HeaderSigner(secret=self.private_key,
+                          key_id=self.public_key,
+                          headers=[
+                            'request-line',
+                            'host',
+                            'date',
+                            'content-type',
+                            'content-md5',
+                            'content-length'])
         unsigned = {
             'Host': HOST,
             'Date': 'Thu, 05 Jan 2012 21:31:40 GMT',
@@ -98,7 +99,7 @@ class TestVerify(unittest.TestCase):
         signed = hs.sign(unsigned, method=METHOD,
                 path=PATH)
 
-        hv = HeaderVerifier(headers=signed, required_headers=["some-other-header"], key_id=self.public_key, host=HOST, method=METHOD, path=PATH)
+        hv = HeaderVerifier(headers=signed, required_headers=["some-other-header"], host=HOST, method=METHOD, path=PATH)
         with self.assertRaises(Exception) as ex:
             hv.verify_headers()
         self.assertEqual(ex.exception.message,
@@ -108,7 +109,7 @@ class TestVerify(unittest.TestCase):
         HOST = "example.com"
         METHOD = "POST"
         PATH = '/foo?param=value&pet=dog'
-        hs = HeaderSigner(key_id='Test', secret=self.private_key, headers=[
+        hs = HeaderSigner(key_id=self.public_key, secret=self.private_key, headers=[
             'request-line',
             'host',
             'date',
@@ -126,7 +127,7 @@ class TestVerify(unittest.TestCase):
         signed = hs.sign(unsigned, method=METHOD,
                 path=PATH)
         hv = HeaderVerifier(headers=signed, method=METHOD, path=PATH,
-                            required_headers=['date', 'request-line'], key_id=self.public_key)
+                            required_headers=['date', 'request-line'])
         self.assertTrue(hv.verify_headers())
 
 if __name__ == "__main__":
