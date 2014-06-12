@@ -1,6 +1,9 @@
+import re
 import struct
 import hashlib
 import base64
+
+from Crypto.PublicKey import RSA
 
 def lkv(d):
     parts = []
@@ -33,13 +36,22 @@ class CaseInsensitiveDict(dict):
     def __contains__(self, key):
         return super(CaseInsensitiveDict, self).__contains__(key.lower())
 
+# currently busted...
 def get_fingerprint(key):
     """
     Takes an ssh public key and generates the fingerprint.
 
     See: http://tools.ietf.org/html/rfc4716 for more info
     """
-    key = base64.b64decode(key.strip().split()[1].encode('ascii'))
+    if key.startswith('ssh-rsa'):
+        key = key.split(' ')[1]
+    else:
+        regex = r'\-{4,5}[\w|| ]+\-{4,5}'
+        key = re.split(regex, key)[1]
+
+    key = key.replace('\n', '')
+    key = key.strip().encode('ascii')
+    key = base64.b64decode(key)
     fp_plain = hashlib.md5(key).hexdigest()
     return ':'.join(a+b for a,b in zip(fp_plain[::2], fp_plain[1::2]))
 
