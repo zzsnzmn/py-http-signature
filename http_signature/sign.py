@@ -22,33 +22,31 @@ class Signer(object):
         self._rsa = False
         self._hash = None
         self.sign_algorithm, self.hash_algorithm = algorithm.split('-')
-        self._get_key(secret)
+        if self.sign_algorithm == 'rsa':
+            self._rsa = self._get_key(secret)
+            self._hash = HASHES[self.hash_algorithm]
+        elif self.sign_algorithm == 'hmac':
+            self._hash = HMAC.new(secret, digestmod=HASHES[self.hash_algorithm])
 
     @property
     def algorithm(self):
         return '%s-%s' % (self.sign_algorithm, self.hash_algorithm)
 
     def _get_key(self, secret):
-        if self.sign_algorithm == 'rsa':
-            if (secret.startswith('-----BEGIN RSA PRIVATE KEY-----') or
-                secret.startswith('-----BEGIN PRIVATE KEY-----')):
-                # string with PEM encoded key data
-                k = secret
-            else:
-                # file with key data
-                with open(expanduser(secret)) as fh:
-                    k = fh.read()
-            try:
-                rsa_key = RSA.importKey(k)
-            except ValueError:
-                pw = getpass('RSA SSH Key Password: ')
-                rsa_key = RSA.importKey(k, pw)
-            self._rsa = PKCS1_v1_5.new(rsa_key)
-            self._hash = HASHES[self.hash_algorithm]
-        elif self.sign_algorithm == 'hmac':
-            self._hash = HMAC.new(secret, digestmod=HASHES[self.hash_algorithm])
-
-        return ""
+        if (secret.startswith('-----BEGIN RSA PRIVATE KEY-----') or
+            secret.startswith('-----BEGIN PRIVATE KEY-----')):
+            # string with PEM encoded key data
+            k = secret
+        else:
+            # file with key data
+            with open(expanduser(secret)) as fh:
+                k = fh.read()
+        try:
+            rsa_key = RSA.importKey(k)
+        except ValueError:
+            pw = getpass('RSA SSH Key Password: ')
+            rsa_key = RSA.importKey(k, pw)
+        return PKCS1_v1_5.new(rsa_key)
 
     def sign_rsa(self, sign_string):
         h = self._hash.new()
