@@ -30,7 +30,7 @@ class TestVerify(unittest.TestCase):
 
     def test_basic_sign(self):
         signer = Signer(secret=self.private_key)
-        verifier = Verifier(public_key=self.public_key)
+        verifier = Verifier(key_id=self.public_key)
 
         # generate signed string
         signature = signer.sign("this is a test")
@@ -42,13 +42,14 @@ class TestVerify(unittest.TestCase):
     def test_default(self):
         # signer = HeaderSigner(secret=self.private_key)
         # verifier = HeaderVerifier(public_key=self.public_key)
-        hs = HeaderSigner(key_id='fingerprint', secret=self.private_key)
+        hs = HeaderSigner(key_id=self.public_key, secret=self.private_key)
 
         unsigned = {
             'Date': 'Thu, 05 Jan 2012 21:31:40 GMT'
         }
         signed = hs.sign(unsigned)
-        hv = HeaderVerifier(headers=signed, public_key=self.public_key)
+        hv = HeaderVerifier(headers=signed, key_id=self.public_key)
+        self.assertTrue(hv.verify_headers())
 
     def test_signed_headers(self):
         HOST = "example.com"
@@ -72,8 +73,8 @@ class TestVerify(unittest.TestCase):
         signed = hs.sign(unsigned, method=METHOD,
                 path=PATH)
 
-        hv = HeaderVerifier(headers=signed, public_key=self.public_key, host=HOST, method=METHOD, path=PATH)
-        self.assertTrue(hv.verify())
+        hv = HeaderVerifier(headers=signed, key_id=self.public_key, host=HOST, method=METHOD, path=PATH)
+        self.assertTrue(hv.verify_headers())
 
     def test_incorrect_headers(self):
         HOST = "example.com"
@@ -97,9 +98,9 @@ class TestVerify(unittest.TestCase):
         signed = hs.sign(unsigned, method=METHOD,
                 path=PATH)
 
-        hv = HeaderVerifier(headers=signed, required_headers=["some-other-header"], public_key=self.public_key, host=HOST, method=METHOD, path=PATH)
+        hv = HeaderVerifier(headers=signed, required_headers=["some-other-header"], key_id=self.public_key, host=HOST, method=METHOD, path=PATH)
         with self.assertRaises(Exception) as ex:
-            hv.verify()
+            hv.verify_headers()
         self.assertEqual(ex.exception.message,
                         "some-other-header is a required header(s)")
 
@@ -125,8 +126,8 @@ class TestVerify(unittest.TestCase):
         signed = hs.sign(unsigned, method=METHOD,
                 path=PATH)
         hv = HeaderVerifier(headers=signed, method=METHOD, path=PATH,
-                            required_headers=['date', 'request-line'], public_key=self.public_key)
-        self.assertTrue(hv.verify())
+                            required_headers=['date', 'request-line'], key_id=self.public_key)
+        self.assertTrue(hv.verify_headers())
 
 if __name__ == "__main__":
     unittest.main()

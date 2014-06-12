@@ -17,12 +17,16 @@ class Verifier(object):
     """
     Verifies signed text against a public key.
     """
-    def __init__(self, public_key='~/.ssh/id_rsa.pub', hash_algorithm="sha256"):
-        with open(public_key, 'r') as k:
-            key = k.read()
-        self.rsa_key = RSA.importKey(key)
+    def __init__(self, key_id='~/.ssh/id_rsa.pub', hash_algorithm="sha256"):
+        self.rsa_key = self._get_key(key_id)
         self.signer = PKCS1_v1_5.new(self.rsa_key)
         self.hash_algorithm = HASHES[hash_algorithm]
+
+    def _get_key(self, key_id):
+        with open(key_id, 'r') as k:
+            key = k.read()
+        return RSA.importKey(key)
+
 
     def verify(self, data, signature):
         """
@@ -39,14 +43,15 @@ class Verifier(object):
             return False
 
 
-class HeaderVerifier(object):
+class HeaderVerifier(Verifier):
     """
     Verifies an HTTP signature from given headers.
     """
     def __init__(self, headers, required_headers=None, method=None, path=None,
-                 host=None, http_version='1.1', public_key='~/.ssh/id_rsa.pub'):
+                 host=None, http_version='1.1', key_id='~/.ssh/id_rsa.pub'):
+        super(HeaderVerifier, self).__init__(key_id=key_id, hash_algorithm="sha256")
+
         required_headers = required_headers or ['date']
-        self.verifier = Verifier(public_key=public_key) # need to look up key in a better way
         self.auth_dict = self.parse_auth(headers['authorization'])
         self.headers = CaseInsensitiveDict(headers)
         self.required_headers = [s.lower() for s in required_headers]
@@ -107,8 +112,8 @@ class HeaderVerifier(object):
         signable = '\n'.join(signable_list)
         return signable
 
-    def verify(self):
+    def verify_headers(self):
         signing_str = self.get_signable()
         # self.auth_dict['keyId']
         # self.auth_dict['signature']
-        return self.verifier.verify(signing_str, self.auth_dict['signature'])
+        return self.verify(signing_str, self.auth_dict['signature'])
