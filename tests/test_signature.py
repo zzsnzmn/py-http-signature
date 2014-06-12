@@ -30,7 +30,7 @@ class TestSign(unittest.TestCase):
     def test_date_added(self):
         hs = HeaderSigner(key_id='', secret=self.key)
         unsigned = {}
-        signed = hs.sign(unsigned)
+        signed = hs.sign_headers(unsigned)
         self.assertIn('Date', signed)
         self.assertIn('Authorization', signed)
 
@@ -39,7 +39,7 @@ class TestSign(unittest.TestCase):
         unsigned = {
             'Date': 'Thu, 05 Jan 2012 21:31:40 GMT'
         }
-        signed = hs.sign(unsigned)
+        signed = hs.sign_headers(unsigned)
         self.assertIn('Date', signed)
         self.assertEqual(unsigned['Date'], signed['Date'])
         self.assertIn('Authorization', signed)
@@ -67,7 +67,7 @@ class TestSign(unittest.TestCase):
             'Content-MD5': 'Sd/dVLAcvNLSq16eXua5uQ==',
             'Content-Length': '18',
         }
-        signed = hs.sign(unsigned, method='POST',
+        signed = hs.sign_headers(unsigned, method='POST',
                 path='/foo?param=value&pet=dog')
         self.assertIn('Date', signed)
         self.assertEqual(unsigned['Date'], signed['Date'])

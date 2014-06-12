@@ -17,25 +17,19 @@ HASHES = {'sha1':   SHA,
           'sha512': SHA512}
 
 class Signer(object):
-    def __init__(self, secret='~/.ssh/id_rsa', algorithm='rsa-sha256',
-            allow_agent=False):
+    def __init__(self, secret='~/.ssh/id_rsa', algorithm='rsa-sha256'):
         assert algorithm in ALGORITHMS, "Unknown algorithm"
-        self._agent_key = False
         self._rsa = False
         self._hash = None
         self.sign_algorithm, self.hash_algorithm = algorithm.split('-')
-        if allow_agent:
-            try:
-                import paramiko as ssh
-            except ImportError:
-                import ssh
-            keys = ssh.Agent().get_keys()
-            self._keys = filter(is_rsa, keys)
-            if self._keys:
-                self._agent_key = self._keys[0]
-                self._keys = self._keys[1:]
-                self.sign_algorithm, self.hash_algorithm = ('rsa', 'sha1')
-        if not self._agent_key and self.sign_algorithm == 'rsa':
+        self._get_key(secret)
+
+    @property
+    def algorithm(self):
+        return '%s-%s' % (self.sign_algorithm, self.hash_algorithm)
+
+    def _get_key(self, secret):
+        if self.sign_algorithm == 'rsa':
             if (secret.startswith('-----BEGIN RSA PRIVATE KEY-----') or
                 secret.startswith('-----BEGIN PRIVATE KEY-----')):
                 # string with PEM encoded key data
@@ -54,13 +48,7 @@ class Signer(object):
         elif self.sign_algorithm == 'hmac':
             self._hash = HMAC.new(secret, digestmod=HASHES[self.hash_algorithm])
 
-    @property
-    def algorithm(self):
-        return '%s-%s' % (self.sign_algorithm, self.hash_algorithm)
-
-    def sign_agent(self, sign_string):
-        data = self._agent_key.sign_ssh_data(None, sign_string)
-        return sig(data)
+        return ""
 
     def sign_rsa(self, sign_string):
         h = self._hash.new()
@@ -72,18 +60,10 @@ class Signer(object):
         hmac.update(sign_string)
         return hmac.digest()
 
-    def swap_keys(self):
-        if self._keys:
-            self._agent_key = self._keys[0]
-            self._keys = self._keys[1:]
-        else:
-            self._agent_key = None
 
     def sign(self, sign_string):
         data = None
-        if self._agent_key:
-            data = self.sign_agent(sign_string)
-        elif self._rsa:
+        if self._rsa:
             data = self.sign_rsa(sign_string)
         elif self._hash:
             data = self.sign_hmac(sign_string)
@@ -92,7 +72,40 @@ class Signer(object):
         return base64.b64encode(data)
 
 
-class HeaderSigner(object):
+class AgentSigner(Signer):
+    def __init__(self, secret='~/.ssh/id_rsa', algorithm='rsa-sha256'):
+        super(AgentSigner, self).__init__()
+        self._agent_key = False
+
+    def _get_key(self):
+        try:
+            import paramiko as ssh
+        except ImportError:
+            import ssh
+        keys = ssh.Agent().get_keys()
+        self._keys = filter(is_rsa, keys)
+        if self._keys:
+            self._agent_key = self._keys[0]
+            self._keys = self._keys[1:]
+            self.sign_algorithm, self.hash_algorithm = ('rsa', 'sha1')
+
+    def swap_keys(self):
+        if self._keys:
+            self._agent_key = self._keys[0]
+            self._keys = self._keys[1:]
+        else:
+            self._agent_key = None
+
+    def sign_agent(self, sign_string):
+        data = self._agent_key.sign_ssh_data(None, sign_string)
+        return sig(data)
+
+    def sign(self, sign_string):
+        data = self.sign_agent(sign_string)
+        return base64.b64encode(data)
+
+
+class HeaderSigner(Signer):
     '''
     Generic object that will sign headers as a dictionary using the http-signature scheme.
     https://github.com/joyent/node-http-signature/blob/master/http_signing.md
@@ -103,9 +116,8 @@ class HeaderSigner(object):
     headers is a list of http headers to be included in the signing string, defaulting to "Date" alone.
     '''
     def __init__(self, key_id='', secret='~/.ssh/id_rsa',
-            algorithm='rsa-sha256', headers=None, allow_agent=False):
-        self.signer = Signer(secret=secret, algorithm=algorithm,
-                allow_agent=allow_agent)
+            algorithm='rsa-sha256', headers=None):
+        super(HeaderSigner, self).__init__(secret=secret, algorithm=algorithm)
         self.headers = headers
         self.signature_template = self.build_signature_template(
                 key_id, algorithm, headers)
@@ -138,9 +150,10 @@ class HeaderSigner(object):
         headers is a case-insensitive dict of mutable headers.
         host is a override for the 'host' header (defaults to value in headers).
         method is the HTTP method (used for 'request-line').
-        pat is the HTTP path (used for 'request-line').
+        path is the HTTP path (used for 'request-line').
         http_version is the HTTP version (used for 'request-line').
         """
+        headers = CaseInsensitiveDict(headers)
         if 'date' not in headers:
             now = datetime.now()
             stamp = mktime(now.timetuple())
@@ -170,24 +183,7 @@ class HeaderSigner(object):
 
                 signable_list.append('%s: %s' % (h.lower(), headers[h]))
         signable = '\n'.join(signable_list)
-        signature = self.signer.sign(signable)
+        signature = self.sign(signable)
         headers['Authorization'] = self.signature_template % signature
-
-    def sign(self, h, method=None, path=None, http_version='1.1'):
-        """
-        Return a dict of headers with the Authorization header added.
-
-        h is a dict of headers.
-        method is the HTTP method (used for 'request-line').
-        pat is the HTTP path (used for 'request-line').
-        http_version is the HTTP version (used for 'request-line').
-        """
-        # case insensitive copy of headers
-        headers = CaseInsensitiveDict(h)
-        self.sign_headers(
-            headers=headers,
-            method=method,
-            path=path,
-            http_version=http_version
-        )
         return headers
+
