@@ -124,6 +124,9 @@ class TestVerify(unittest.TestCase):
         }
         signed = hs.sign(unsigned, method=METHOD,
                 path=PATH)
+        hv = HeaderVerifier(headers=signed, method=METHOD, path=PATH,
+                            required_headers=['date', 'request-line'], public_key=self.public_key)
+        self.assertTrue(hv.verify())
 
 if __name__ == "__main__":
     unittest.main()
