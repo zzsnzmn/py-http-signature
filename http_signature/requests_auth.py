@@ -18,11 +18,11 @@ class HTTPSignatureAuth(AuthBase):
             headers=None, allow_agent=False):
         headers = headers or []
         self.header_signer = HeaderSigner(key_id=key_id, secret=secret,
-                algorithm=algorithm, headers=headers, allow_agent=allow_agent)
+                algorithm=algorithm, headers=headers)
         self.uses_host = 'host' in [h.lower() for h in headers]
 
     def __call__(self, r):
-        self.header_signer.sign_headers(
+        headers = self.header_signer.sign_headers(
                 r.headers,
                 # 'Host' header unavailable in request object at this point
                 # if 'host' header is needed, extract it from the url
@@ -30,4 +30,5 @@ class HTTPSignatureAuth(AuthBase):
                 method=r.method,
                 path=r.path_url,
                 http_version='1.1')
+        r.headers.update(headers)
         return r
