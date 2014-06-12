@@ -8,7 +8,7 @@ class HTTPSignatureAuth(AuthBase):
     '''
     Sign a request using the http-signature scheme.
     https://github.com/joyent/node-http-signature/blob/master/http_signing.md
-    
+
     key_id is the mandatory label indicating to the server which secret to use
     secret is the filename of a pem file in the case of rsa, a password string in the case of an hmac algorithm
     algorithm is one of the six specified algorithms
@@ -16,6 +16,7 @@ class HTTPSignatureAuth(AuthBase):
     '''
     def __init__(self, key_id='', secret='', algorithm='rsa-sha256',
             headers=None, allow_agent=False):
+        headers = headers or []
         self.header_signer = HeaderSigner(key_id=key_id, secret=secret,
                 algorithm=algorithm, headers=headers, allow_agent=allow_agent)
         self.uses_host = 'host' in [h.lower() for h in headers]

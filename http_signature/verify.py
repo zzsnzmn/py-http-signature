@@ -43,8 +43,17 @@ class HeaderVerifier(object):
     """
     Verifies an HTTP signature from given headers.
     """
-    def __init__(self, public_key='~/.ssh/id_rsa.pub'):
-        self.verifier = Verifier(public_key=public_key)
+    def __init__(self, headers, required_headers=None, method=None, path=None,
+                 host=None, http_version='1.1', public_key='~/.ssh/id_rsa.pub'):
+        required_headers = required_headers or ['date']
+        self.verifier = Verifier(public_key=public_key) # need to look up key in a better way
+        self.auth_dict = self.parse_auth(headers['authorization'])
+        self.headers = CaseInsensitiveDict(headers)
+        self.required_headers = [s.lower() for s in required_headers]
+        self.http_version = http_version
+        self.method = method
+        self.path = path
+        self.host = host
 
     def parse_auth(self, auth):
         """Basic Authorization header parsing."""
@@ -58,44 +67,48 @@ class HeaderVerifier(object):
         param_dict = {k: v.strip('"') for k, v in param_pairs}
         return param_dict
 
-    def get_signable(self, headers, method, path):
+
+    def get_signable(self):
         """Get the string that is signed"""
-        # if 'date' not in header_dict['headers']:
-            # now = datetime.now()
-            # stamp = mktime(now.timetuple())
-            # header_dict['date'] = format_date_time(stamp)
-        http_version = '1.1'
-        header_dict = self.parse_auth(headers['authorization'])
-        required_headers = header_dict['headers'].split(' ') or ['date']
+        header_dict = self.parse_auth(self.headers['authorization'])
+        if self.auth_dict.get('headers'):
+            auth_headers = self.auth_dict.get('headers').split(' ')
+        else:
+            auth_headers = ['date']
+
+        if len(set(self.required_headers) - set(auth_headers)) > 0:
+            raise Exception('{} is a required header(s)'.format(', '.join(set(self.required_headers)-set(auth_headers))))
+
         signable_list = []
-        for h in required_headers:
+        for h in auth_headers:
             if h == 'request-line':
-                if not method or not path:
+                if not self.method or not self.path:
                     raise Exception('method and path arguments required when using "request-line"')
 
                 signable_list.append('%s %s HTTP/%s' %
-                        (method.upper(), path, http_version))
+                        (self.method.upper(), self.path, self.http_version))
             elif h == 'host':
                 # 'host' special case due to requests lib restrictions
                 # 'host' is not available when adding auth so must use a param
                 # if no param used, defaults back to the 'host' header
-                if not headers.get('host') :
+                if not self.headers.get('host') :
                     if 'host' in header_dict:
-                        host = headers[h]
+                        host = self.headers[h]
+                    elif self.host:
+                       signable_list.append('%s: %s' % (h.lower(), self.host))
                     else:
                         raise Exception('missing required header "%s"' % (h))
-                # signable_list.append('%s: %s' % (h.lower(), host))
-                signable_list.append('%s: %s' % (h.lower(), "example.com"))
+                signable_list.append('%s: %s' % (h.lower(), self.headers[h]))
             else:
-                if h not in headers:
+                if h not in self.headers:
                     raise Exception('missing required header "%s"' % (h))
 
-                signable_list.append('%s: %s' % (h.lower(), headers[h]))
+                signable_list.append('%s: %s' % (h.lower(), self.headers[h]))
         signable = '\n'.join(signable_list)
-        return signable, header_dict['signature'], header_dict['keyId']
+        return signable
 
-    def verify_headers(self, headers, host=None, method=None, path=None):
-        headers = CaseInsensitiveDict(headers)
-        signing_str, signature, key_id = self.get_signable(headers=headers, method=method, path=path)
-        return self.verifier.verify(signing_str, signature)
-
+    def verify(self):
+        signing_str = self.get_signable()
+        # self.auth_dict['keyId']
+        # self.auth_dict['signature']
+        return self.verifier.verify(signing_str, self.auth_dict['signature'])
