@@ -16,6 +16,8 @@ HASHES = {'sha1':   SHA,
 class Verifier(object):
     """
     Verifies signed text against a public key.
+
+    Currently only supports rsa.
     """
     def __init__(self, key_id='~/.ssh/id_rsa.pub', hash_algorithm="sha256"):
         self.rsa_key = self._get_key(key_id)
@@ -32,7 +34,7 @@ class Verifier(object):
         """
         Checks data against the public key
         """
-        digest = SHA256.new()
+        digest = self.hash_algorithm.new()
         # might need to b64 encode this
         digest.update(data)
         if self.signer.verify(digest, b64decode(signature)):
@@ -58,8 +60,9 @@ class HeaderVerifier(Verifier):
         self.method = method
         self.path = path
         self.host = host
+        algorithm = self.auth_dict.get('algorithm', 'rsa-sha256').split('-')[0]
         super(HeaderVerifier, self).__init__(key_id=self.auth_dict['keyId'],
-                                             hash_algorithm="sha256") # should get hash algorithm from request...
+                                             hash_algorithm=algorithm)
 
     def parse_auth(self, auth):
         """Basic Authorization header parsing."""
@@ -115,6 +118,4 @@ class HeaderVerifier(Verifier):
 
     def verify_headers(self):
         signing_str = self.get_signable()
-        # self.auth_dict['keyId']
-        # self.auth_dict['signature']
         return self.verify(signing_str, self.auth_dict['signature'])
